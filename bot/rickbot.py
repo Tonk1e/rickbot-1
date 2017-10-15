@@ -4,6 +4,7 @@ import logging
 from plugin_manager import PluginManager
 from database import Db
 from utils import find_server
+from time import time
 
 from plugins.hello import Hello
 from plugins.commands import Commands
@@ -17,17 +18,39 @@ class RickBot(discord.Client):
         self.db = Db(self.redis_url)
         self.plugin_manager = PluginManager(self)
         self.plugin_manager.load_all()
+        self.last_messages = []
 
     async def on_ready(self):
         with open('welcome_ascii.txt') as f:
             print(f.read())
 
-        await self.heartbeat(5)
+        discord.utils.create_task(self.heartbeat(5), loop=self.loop)
+        discord.utils.create_task(self.update_stats(60), loop=self.loop)
 
     async def heartbeat(self, interval):
         while self.is_logged_in:
             self.db.redis.set('heartbeat', 1, ex=interval)
             await asyncio.sleep(0.9 * interval)
+
+    async def update_stats(self, interval):
+        while self.is_logged_in:
+            # Total members and online members
+            members = list(self.get_all_members())
+            online_members = filter(lambda m: m.status is discord.Status.online,
+                                    members)
+            online_members = list(online_members)
+            self.db.redis.set('rickbot:stats:online_members',
+                              len(online_members))
+            self.db.redis.set('rickbot:stats:members', len(members))
+
+            # Last messages
+            for index, timestamp in enumerate(self.last_messages):
+                if timestamp + interval < time():
+                    self.last_messages.pop(index)
+            self.db.redis.set('rickbot:stats:last_messages',
+                              len(self.last_messages))
+
+            await asyncio.sleep(interval)
 
     async def _run_plugin_event(self, plugin, event, *args, **kwargs):
         # A yummy modified coroutine that is based on Client._run_event
@@ -61,6 +84,12 @@ class RickBot(discord.Client):
             'member_unban',
             'typing'
         )
+
+        # Total number of messages stats update
+        if event == 'message':
+            self.db.redis.incr('rickbot:stats:messages')
+            self.last_messages.append(time())
+
         log.debug('Dispatching event {}'.format(event))
         method = 'on_' + event
         handler = 'handle_' + event
