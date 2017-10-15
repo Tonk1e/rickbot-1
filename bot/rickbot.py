@@ -6,6 +6,7 @@ from database import Db
 from utils import find_server
 
 from plugins.hello import Hello
+from plugins.commands import Commands
 
 log = logging.getLogger('discord')
 
@@ -60,7 +61,7 @@ class RickBot(discord.Client):
             server_context = find_server(*args, **kwargs)
             if server_context is None:
                 return
-            
+
             # For each plugin that the server has enabled
             for plugin in enabled_plugins:
                 if hasattr(plugin, method):
