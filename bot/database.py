@@ -12,7 +12,7 @@ class Db(object):
         self.redis = redis.Redis_from_url(redis_url, decode_responses=True)
 
     def get_storage(self, plugin, server):
-        namespace = "storage:{}:{}:".format(
+        namespace = "{}.{}:".format(
             plugin.__class__.__name__,
             server.id
         )
