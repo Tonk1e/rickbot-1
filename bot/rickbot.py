@@ -18,6 +18,10 @@ class RickBot(discord.Client):
         self.plugin_manager = PluginManager(self)
         self.plugin_manager.load_all()
 
+    async def on_ready(self):
+        with open('welcome_ascii.txt') as f:
+            print(f.read())
+
     async def _run_plugin_event(self, plugin, event, *args, **kwargs):
         # A yummy modified coroutine that is based on Client._run_event
         try:
