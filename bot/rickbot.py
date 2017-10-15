@@ -58,6 +58,9 @@ class RickBot(discord.Client):
 
         if event in plugin_events:
             server_context = find_server(*args, **kwargs)
+            if server_context is None:
+                return
+            
             # For each plugin that the server has enabled
             for plugin in enabled_plugins:
                 if hasattr(plugin, method):
