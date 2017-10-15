@@ -24,8 +24,17 @@ class RickBot(discord.Client):
         with open('welcome_ascii.txt') as f:
             print(f.read())
 
+        self.add_all_servers()
         discord.utils.create_task(self.heartbeat(5), loop=self.loop)
         discord.utils.create_task(self.update_stats(60), loop=self.loop)
+
+    async def all_all_servers(self):
+        for server in self.servers:
+            self.db.sadd('servers', server.id)
+
+    async def on_server_join(self, server):
+        log.info('Joined {} server: {}!'.format(server.owner.name, server.name))
+        self.db.sadd('servers', server.id)
 
     async def heartbeat(self, interval):
         while self.is_logged_in:
