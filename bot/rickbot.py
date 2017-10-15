@@ -22,6 +22,13 @@ class RickBot(discord.Client):
         with open('welcome_ascii.txt') as f:
             print(f.read())
 
+        await self.heartbeat(5)
+
+    async def heartbeat(self, interval):
+        while self.is_logged_in:
+            self.db.redis.set('heartbeat', 1, ex=interval)
+            await asyncio.sleep(0.9 * interval)
+
     async def _run_plugin_event(self, plugin, event, *args, **kwargs):
         # A yummy modified coroutine that is based on Client._run_event
         try:
