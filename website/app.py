@@ -1,10 +1,12 @@
 from flask import Flask, session, request, url_for, render_template, \
-redirect, jsonify, make_response
+redirect, jsonify, make_response, flash, abort
 import os
 from functools import wraps
 from requests_oauthlib import OAuth2Session
 import redis
 import json
+import binascii
+import re
 
 app = Flask(__name__)
 app.debug = True
@@ -30,8 +32,9 @@ def csrf_protect():
             abort(403)
 
 def generate_csrf_token():
+    # Assign the CSRF token a nice lengthly hexadecimal
     if '_csrf_token' not in session:
-        session['_csrf_token'] = some_random_string()
+        session['_csrf_token'] = str(binascii.hexlify(os.urandom(15)))
     return session['_csrf_token']
 
 app.jinja_env.globals['csrf_token'] = generate_csrf_token
@@ -175,7 +178,7 @@ def require_bot_admin(f):
         return r(*args, **kwargs)
     return wrapper
 
-# This will soon be dashboard stuff. For now it is just some text...
+
 @app.route('/dashboard/<int:server_id>')
 @require_auth
 @require_bot_admin
@@ -201,7 +204,62 @@ def plugin_commands(server_id):
     servers = session['guilds']
     server = list(filter(lambda g: g['id'] == str(server_id), servers))[0]
     enabled_plugins = db.smembers('plugins:{}'.format(server_id))
-    return render_template('plugin_commands.html', server=server,
-                           enabled_plugins=enabled_plugins)
+
+    commands = []
+    commands_names = db.smembers('Commands.{}:commands'.format(server_id))
+    for cmd in commands_names:
+        commands = {
+            'name': cmd,
+            'message': db.get('Commands.{}:command:{}'.format(server_id, cmd))
+        }
+        commands.append(command)
+    commands = sorted(commands, key=lambda k: k['name'])
+
+    return render_template('plugin-commands.html',
+        server=server,
+        enabled_plugins=enabled_plugins,
+        commands=commands
+    )
+
+@app.route('/dashboard/commands/add', methods=['POST'])
+def add_command(server_id):
+    cmd_name = request.form.get('cmd_name', '')
+    cmd_message = request.form.get('cmd_message', '')
+
+    edit = cmd_name in db.smembers('Commands.{}:commands'.format(server_id))
+    print(edit)
+
+    cb = url_for('plugin-commands', server_id=server_id)
+    if len(cmd_name) == 0 or len(cmd_name) > 15:
+        flash('The name of a command should be between 1 and 15 characters '\
+              'long', 'danger')
+    elif not edit and not re.match("^[A-Za-z0-9_-]*$", cmd_name):
+        flash('A command name should only contain letters from a-z, numbers,'\
+              ' _ or -', 'danger')
+    elif len(cmd_message) == 0 or len(cmd_message) > 2000:
+        flash('A command message should not be longer than 2000 characters.',
+              'danger')
+    else:
+        if not edit:
+            cmd_name = '!' + cmd_name
+        db.sadd('Commands.{}:'.format(server_id), cmd_name)
+        db.set('Commands.{}:command:{}'.format(server_id, cmd_name),
+               cmd_message)
+        if edit:
+            flash('Command {} edited!'.format(cmd_name), 'success')
+        else:
+            flash('Command {} has been added!'.format(cmd_name), 'success')
+
+    return redirect(cb)
+
+@app.route('/dashboard/<int:server_id>/commands/<string:command>/delete')
+@require_auth
+@require_bot_admin
+@server_check
+def delete_command(server_id, command):
+    db.srem('Commands.{}:commands'.format(server_id), command)
+    db.delete('Commands.{}:command'.format(server_id, command))
+    flash('Command {} deleted!'.format(command), success)
+    return redirect(url_for('plugin-commands', server_id=server_id))
 
 app.run()
