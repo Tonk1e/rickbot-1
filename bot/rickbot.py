@@ -30,10 +30,12 @@ class RickBot(discord.Client):
 
     async def all_all_servers(self):
         for server in self.servers:
-            self.db.sadd('servers', server.id)
+            log.debug('Adding server {}\'s ID to DB'.format(server.id))
+            self.db.redis.sadd('servers', server.id)
 
     async def on_server_join(self, server):
         log.info('Joined {} server: {}!'.format(server.owner.name, server.name))
+        log.debug('Adding self {}\'s ID to DB'.format(server.id))
         self.db.sadd('servers', server.id)
 
     async def heartbeat(self, interval):
