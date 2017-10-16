@@ -26,7 +26,7 @@ db = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 # CSRF Security
 @app.before_request
 def csrf_protect():
-    if request.method = "POST":
+    if request.method == "POST":
         token = session.pop('_csrf_token', None)
         if not token or token != request.form.get('_csrf_token'):
             abort(403)
@@ -68,7 +68,7 @@ def make_session(token=None, state=None, scope=None):
 
 @app.route('/')
 def index():
-    oauth2_token = requests.cookies.get('oauth2_token')
+    oauth2_token = request.cookies.get('oauth2_token')
     # Hm. I remember you!
     if oauth2_token:
         oauth2_token = json.loads(oauth2_token)
