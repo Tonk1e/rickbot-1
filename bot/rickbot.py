@@ -29,12 +29,16 @@ class RickBot(discord.Client):
         discord.utils.create_task(self.heartbeat(5), loop=self.loop)
         discord.utils.create_task(self.update_stats(60), loop=self.loop)
 
-    async def all_all_servers(self):
+    async def add_all_servers(self):
         log.debug('Syncing servers and DB')
         self.db.redis.delete('servers')
         for server in self.servers:
             log.debug('Adding server {}\'s ID to DB'.format(server.id))
             self.db.redis.sadd('servers', server.id)
+
+    async def send_message(self, *args, **kwargs):
+        log.info('RickBot >> {}'.format(args[1].replace('\n', '~')))
+        await super().send_message(*args, **kwargs)
 
     async def on_server_join(self, server):
         log.info('Joined {} server: {}!'.format(server.owner.name, server.name))
