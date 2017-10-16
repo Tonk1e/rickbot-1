@@ -37,7 +37,7 @@ class RickBot(discord.Client):
     async def on_server_join(self, server):
         log.info('Joined {} server: {}!'.format(server.owner.name, server.name))
         log.debug('Adding self {}\'s ID to DB'.format(server.id))
-        self.db.sadd('servers', server.id)
+        self.db.redis.sadd('servers', server.id)
 
     async def heartbeat(self, interval):
         while self.is_logged_in:
