@@ -10,7 +10,7 @@ import re
 
 app = Flask(__name__)
 app.debug = True
-app.config['SECRET_KEY'] = ""
+app.config['SECRET_KEY'] = "\x10\xdf\xba\xed\xe5Ih\x17U\nQb~\x99\x01"
 
 REDIS_URL = os.environ.get('REDIS_URL')
 OAUTH2_CLIENT_ID = os.environ['OAUTH2_CLIENT_ID']
