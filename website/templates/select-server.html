@@ -14,6 +14,7 @@
                     <option value='{{url_for('dashboard', server_id=server['id'])}}'>{{server['name']}}</option>
                     {% endfor %}
                  </select>
+
                  <script>
                     $("#select").change(function () {
                         var val = jQuery(this).val();
@@ -22,6 +23,7 @@
                             location.reload()
                     })
                  </script>
+
                  {% else %}
                  <h3>...Ah. It looks like you don't have any server!</h3>
                  <h3>Go ahead and create one! <br/>I'm waiting for you ;) </h3>
