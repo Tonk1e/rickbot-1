@@ -9,7 +9,6 @@ import binascii
 import re
 
 app = Flask(__name__)
-app.debug = True
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "\x10\xdf\xba\xed\xe5Ih\x17U\nQb~\x99\x01")
 
 REDIS_URL = os.environ.get('REDIS_URL')
@@ -283,4 +282,6 @@ def plugin_help(server_id):
         enabled_plugins=enabled_plugins
     )
 
-app.run()
+if __name__ == '__main__':
+    app.debug = True
+    app.run()
