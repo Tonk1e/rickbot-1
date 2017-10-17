@@ -6,7 +6,6 @@ from database import Db
 from utils import find_server
 from time import time
 
-from plugins.hello import Hello
 from plugins.commands import Commands
 from plugins.help import Help
 
@@ -29,15 +28,26 @@ class RickBot(discord.Client):
         discord.utils.create_task(self.heartbeat(5), loop=self.loop)
         discord.utils.create_task(self.update_stats(60), loop=self.loop)
 
-    async def all_all_servers(self):
+    async def add_all_servers(self):
+        log.debug('Syncing servers and DB')
+        self.db.redis.delete('servers')
         for server in self.servers:
             log.debug('Adding server {}\'s ID to DB'.format(server.id))
             self.db.redis.sadd('servers', server.id)
 
+    async def send_message(self, *args, **kwargs):
+        log.info('RickBot >> {}'.format(args[1].replace('\n', '~')))
+        await super().send_message(*args, **kwargs)
+
     async def on_server_join(self, server):
         log.info('Joined {} server: {}!'.format(server.owner.name, server.name))
         log.debug('Adding self {}\'s ID to DB'.format(server.id))
-        self.db.sadd('servers', server.id)
+        self.db.redis.sadd('servers', server.id)
+
+    async def on_server_remove(self, server):
+        log.info('Leaving {} server: {}'.format(server.owner.name, sever.name))
+        log.debug('Removing server {}\'s from DB'.format(server.id))
+        self.db.redis.srem('servers', server.id)
 
     async def heartbeat(self, interval):
         while self.is_logged_in:

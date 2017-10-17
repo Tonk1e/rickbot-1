@@ -9,13 +9,12 @@ import binascii
 import re
 
 app = Flask(__name__)
-app.debug = True
-app.config['SECRET_KEY'] = ""
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "\x10\xdf\xba\xed\xe5Ih\x17U\nQb~\x99\x01")
 
 REDIS_URL = os.environ.get('REDIS_URL')
 OAUTH2_CLIENT_ID = os.environ['OAUTH2_CLIENT_ID']
 OAUTH2_CLIENT_SECRET = os.environ['OAUTH2_CLIENT_SECRET']
-OAUTH2_REDIRECT_URI = 'http://localhost:5000/confirm_login'
+OAUTH2_REDIRECT_URI = os.environ.get('OAUTH2_REDIRECT_URI', 'http://localhost:5000/confirm_login')
 API_BASE_URL = os.environ.get('API_BASE_URL', 'https://discordapp.com/api')
 AUTHORIZATION_BASE_URL = API_BASE_URL + '/oauth2/authorize'
 TOKEN_URL = API_BASE_URL + '/oauth2/token'
@@ -68,7 +67,7 @@ def make_session(token=None, state=None, scope=None):
 
 @app.route('/')
 def index():
-    oauth2_token = requests.cookies.get('oauth2_token')
+    oauth2_token = request.cookies.get('oauth2_token')
     # Hm. I remember you!
     if oauth2_token:
         oauth2_token = json.loads(oauth2_token)
@@ -159,7 +158,7 @@ def server_check(f):
             url = "https://discordapp.com/oauth2/authorize?&client_id={}"\
                 "&scope=bot&permissions={}&guild_id={}".format(
                     OAUTH2_CLIENT_ID,
-                    '1'*32,
+                    '66321471'
                     server_id
                 )
             return redirect(url)
@@ -283,4 +282,6 @@ def plugin_help(server_id):
         enabled_plugins=enabled_plugins
     )
 
-app.run()
+if __name__ == '__main__':
+    app.debug = True
+    app.run()
