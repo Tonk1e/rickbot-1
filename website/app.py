@@ -258,7 +258,7 @@ def add_command(server_id):
 def delete_command(server_id, command):
     db.srem('Commands.{}:commands'.format(server_id), command)
     db.delete('Commands.{}:command'.format(server_id, command))
-    flash('Command {} deleted!'.format(command), success)
+    flash('Command {} deleted!'.format(command), 'success')
     return redirect(url_for('plugin-commands', server_id=server_id))
 
 @app.route('/dashboard/<int:server_id>/help')
@@ -268,10 +268,10 @@ def delete_command(server_id, command):
 def plugin_help(server_id):
     disable = request.args.get("disable")
     if disable:
-        db.srem('plugins:{}'.format(server_id), Help)
+        db.srem('plugins:{}'.format(server_id), 'Help')
         return redirect(url_for('dashboard', server_id=server_id))
 
-    db.sadd('plugins:{}'.format(server_id), Help)
+    db.sadd('plugins:{}'.format(server_id), 'Help')
 
     servers = session['guilds']
     server = list(filter(lambda g: g['id'] == str(server_id), servers))[0]
