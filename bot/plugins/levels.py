@@ -63,14 +63,26 @@ class Levels(Plugin):
                 )
                 return
 
-            player_xp = storage.get('player:{}:xp'.format(player.id))
+            total_player_xp = storage.get('player:{}:xp'.format(player.id))
             player_lvl = storage.get('player:{}:lvl'.format(player.id))
-            player_rank = storage.sort('players', by='players:*:xp').index(player.id)+1
+            x = 0
+            for l in range(0,int(player_lvl)):
+                x += 100*(1.2**l)
+            remaining_xp = int(int(player_total_xp) - x)
+            level_xp = int(Levels._get_level_xp(int(player_lvl)))
+            players = self.rickbot.db.redis.sort('Levels.{}:players'.format(message.server.id),
+                        by='Levels.{}:player:*:xp'.format(message.server.id),
+                        start=0,
+                        num=1,
+                        desc=True)
+            player_rank = players.index(player.id)+1
 
-            response = '{}: **Level {}** / **Total XP {}** / **Rank {}/{}**'.format(
+            response = '{}: **Level {}** | **XP {}/{}** | **Total XP {}** | **Rank {}/{}**'.format(
                 player.mention,
                 player_lvl,
-                player_xp,
+                remaining_xp,
+                level_xp,
+                player_total_xp,
                 player_rank,
                 len(players)
             )
@@ -109,7 +121,7 @@ class Levels(Plugin):
         # Give player random int xp between 5 and 10
         storage.incr('player:{}:xp'.format(player.id), amount=randint(5,10))
         # Block player for a 60 sec cooldown
-        storage.set('player:{}:check'.format(player.id), '1', 60)
+        storage.set('player:{}:check'.format(player.id), '1', ex=60)
         # Get the new player xp
         player_xp = storage.get('player:{}:xp'.format(player.id))
         # Update the levels

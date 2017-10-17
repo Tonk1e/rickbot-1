@@ -9,24 +9,22 @@
             <div class="form-group">
                 {% if user_servers %}
                 <select class="form-control" id="select">
-                    <option value="">Which server? Make your choice ;)</option>
+                    <option value="">Make your choice ;)</option>
                     {% for server in user_servers %}
                     <option value='{{url_for('dashboard', server_id=server['id'])}}'>{{server['name']}}</option>
                     {% endfor %}
                  </select>
-
                  <script>
                     $("#select").change(function () {
                         var val = jQuery(this).val();
-                        if val(!=''){
-                          location.href = val
+                        if(val!=''){
+                            location.href = val
                         }
                     })
                  </script>
-
                  {% else %}
-                 <h3>...Ah. It looks like you don't have any server!</h3>
-                 <h3>Go ahead and create one! <br/>I'm waiting for you ;) </h3>
+                 <h3>... It looks like your not in any servers!</h3>
+                 <h3>Go create one! <br/>Then the sky's the limit! </h3>
                  {% endif %}
             </div>
         </div>

@@ -366,9 +366,9 @@ def levels(server_id):
     for i in range(0, len(_player),6):
         lvl = int(_players[i+1])
         x = 0
-        for l in range(0,lvl-1):
+        for l in range(0,lvl):
             x += 100*(1.2**1)
-        remaining_xp = int(_players[i]) - x
+        remaining_xp = int(int(_players[i]) - x)
         player = {
             'xp': remaining_xp,
             'lvl': _players[i+1],
