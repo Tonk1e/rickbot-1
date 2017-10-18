@@ -12,11 +12,11 @@ class Levels(Plugin):
     def get_commands(self, server):
         commands = [
             {
-                'name': '!levels'
+                'name': '!levels',
                 'description': 'Gives you the leaderboard for your server!'
             },
             {
-                'name': '!xp'
+                'name': '!xp',
                 'description': 'Gives you your xp, level and rank'
             }
         ]

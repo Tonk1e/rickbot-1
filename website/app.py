@@ -114,7 +114,6 @@ def get_or_update_user():
         session['user'] = discord.get(API_BASE_URL + '/users/@me').json()
         session['guilds'] = discord.get(
                             API_BASE_URL + '/users/@me/guilds').json()
-        print(url_for('static', filename='img/no_logo.png'))
         if session['user'].get('avatar') is None:
             session['user']['avatar'] = url_for('static',
                                                 filename='img/no_logo.png')
@@ -164,7 +163,7 @@ def require_bot_admin(f):
         if str(server_id) not in list(map(lambda g: g['id'], user_servers)):
             return redirect(url_for('select_server'))
 
-        return r(*args, **kwargs)
+        return f(*args, **kwargs)
     return wrapper
 
 
@@ -198,7 +197,7 @@ def plugin_commands(server_id):
     commands = []
     commands_names = db.smembers('Commands.{}:commands'.format(server_id))
     for cmd in commands_names:
-        commands = {
+        command = {
             'name': cmd,
             'message': db.get('Commands.{}:command:{}'.format(server_id, cmd))
         }
@@ -380,7 +379,8 @@ def levels(server_id):
             'id': _players[i+5]
         }
         players.append(player)
-    return render_template('levels.html', players=players, server=server)
+    return render_template('levels.html', players=players, server=server,
+        title="{} leaderboard - RickBot".format(server['name']))
 
 
 if __name__ == '__main__':
