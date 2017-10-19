@@ -7,6 +7,7 @@ import redis
 import json
 import binascii
 import re
+from math import floor
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "\x10\xdf\xba\xed\xe5Ih\x17U\nQb~\x99\x01")
@@ -67,16 +68,6 @@ def make_session(token=None, state=None, scope=None):
 
 @app.route('/')
 def index():
-    oauth2_token = request.cookies.get('oauth2_token')
-    # Hm. I remember you!
-    if oauth2_token:
-        oauth2_token = json.loads(oauth2_token)
-        session['oauth2_token'] = oauth2_token
-        try:
-            get_or_update_user()
-            return redirect(url_for('select_server'))
-        except:
-            pass
     return render_template('index.html')
 
 @app.route('/about')
@@ -86,9 +77,8 @@ def about():
 @app.route('/logout')
 def logout():
     session.pop('user')
-    resp = make_response(redirect(url_for('index')))
-    resp.set_cookie('oauth2_token', '', expires=0)
-    return resp
+
+    return redirect(url_for('index'))
 
 @app.route('/login')
 def login():
@@ -115,11 +105,7 @@ def confirm_login():
     session['oauth2_token'] = token
     get_or_update_user()
 
-    resp = make_response(redirect(url_for('select_server')))
-    # Mark my words; I'll remember you!
-    resp.set_cookie('oauth2_token', json.dumps(token), max_age=3600*24*7)
-
-    return resp
+    return redirect(url_for('select_server'))
 
 def get_or_update_user():
     oauth2_token = session.get('oauth2_token')
@@ -128,7 +114,6 @@ def get_or_update_user():
         session['user'] = discord.get(API_BASE_URL + '/users/@me').json()
         session['guilds'] = discord.get(
                             API_BASE_URL + '/users/@me/guilds').json()
-        print(url_for('static', filename='img/no_logo.png'))
         if session['user'].get('avatar') is None:
             session['user']['avatar'] = url_for('static',
                                                 filename='img/no_logo.png')
@@ -138,11 +123,15 @@ def get_or_update_user():
 
 
 def get_user_servers(user, guilds):
-    return list(filter(lambda g: g['owners'] is True, guilds))
+    return list(filter(lambda g: g['owner'] is True, guilds))
 
 @app.route('/servers')
 @require_auth
 def select_server():
+    guild_id = request.args.get('guild_id')
+    if guild_id:
+        return redirect(url_for('dashboard', server_id=int(guild_id)))
+
     get_or_update_user()
     user_servers = get_user_servers(session['user'], session['guilds'])
 
@@ -158,7 +147,7 @@ def server_check(f):
             url = "https://discordapp.com/oauth2/authorize?&client_id={}"\
                 "&scope=bot&permissions={}&guild_id={}".format(
                     OAUTH2_CLIENT_ID,
-                    '66321471'
+                    '66321471',
                     server_id
                 )
             return redirect(url)
@@ -174,7 +163,7 @@ def require_bot_admin(f):
         if str(server_id) not in list(map(lambda g: g['id'], user_servers)):
             return redirect(url_for('select_server'))
 
-        return r(*args, **kwargs)
+        return f(*args, **kwargs)
     return wrapper
 
 
@@ -188,6 +177,7 @@ def dashboard(server_id):
     enabled_plugins = db.smembers('plugins:{}'.format(server_id))
     return render_template('dashboard.html', server=server,
                            enabled_plugins=enabled_plugins)
+
 
 @app.route('/dashboard/<int:server_id>/commands')
 @require_auth
@@ -207,7 +197,7 @@ def plugin_commands(server_id):
     commands = []
     commands_names = db.smembers('Commands.{}:commands'.format(server_id))
     for cmd in commands_names:
-        commands = {
+        command = {
             'name': cmd,
             'message': db.get('Commands.{}:command:{}'.format(server_id, cmd))
         }
@@ -219,6 +209,7 @@ def plugin_commands(server_id):
         enabled_plugins=enabled_plugins,
         commands=commands
     )
+
 
 @app.route('/dashboard/commands/add', methods=['POST'])
 def add_command(server_id):
@@ -251,6 +242,7 @@ def add_command(server_id):
 
     return redirect(cb)
 
+
 @app.route('/dashboard/<int:server_id>/commands/<string:command>/delete')
 @require_auth
 @require_bot_admin
@@ -258,8 +250,9 @@ def add_command(server_id):
 def delete_command(server_id, command):
     db.srem('Commands.{}:commands'.format(server_id), command)
     db.delete('Commands.{}:command'.format(server_id, command))
-    flash('Command {} deleted!'.format(command), success)
+    flash('Command {} deleted!'.format(command), 'success')
     return redirect(url_for('plugin-commands', server_id=server_id))
+
 
 @app.route('/dashboard/<int:server_id>/help')
 @require_auth
@@ -268,10 +261,10 @@ def delete_command(server_id, command):
 def plugin_help(server_id):
     disable = request.args.get("disable")
     if disable:
-        db.srem('plugins:{}'.format(server_id), Help)
+        db.srem('plugins:{}'.format(server_id), 'Help')
         return redirect(url_for('dashboard', server_id=server_id))
 
-    db.sadd('plugins:{}'.format(server_id), Help)
+    db.sadd('plugins:{}'.format(server_id), 'Help')
 
     servers = session['guilds']
     server = list(filter(lambda g: g['id'] == str(server_id), servers))[0]
@@ -281,6 +274,114 @@ def plugin_help(server_id):
         server=server,
         enabled_plugins=enabled_plugins
     )
+
+
+@app.route('/dashboard/<int:server_id>/levels')
+@require_auth
+@require_bot_admin
+@server_check
+def plugin_levels(server_id):
+    disable = request.args.get('disable')
+    if disable:
+        db.srem('plugin:{}'.format(server_id), 'Levels')
+        return redirect(url_for('dashboard', server_id=server_id))
+    db.sadd('plugins:{}'.format(server_id), 'Levels')
+    servers = session['guilds']
+    server = list(filter(lambda g: g['id']==str(server_id), servers))[0]
+    enabled_plugins = db.smembers('plugins:{}'.format(server_id))
+
+    initial_announcement = 'Wagwan {player}, you just leveled up to **level {level}**! http://gph.is/29qxLq2'
+    announcement_enabled= db.get('Levels.{}:announcement_enabled'.format(server_id))
+    announcement = db.get('Level.{}:announcement'.format(server_id))
+    if announcement is None:
+        db.set('Levels.{}:announcement'.format(server_id), initial_announcement)
+        db.set('Levels.{}:announcement_enabled'.format(server_id), '1')
+        announcement = '1'
+
+    announcement = db.get('Levels.{}:announcement'.format(server_id))
+
+    return render_template('plugin-levels.html',
+        server=server,
+        enabled_plugins=enabled_plugins,
+        announcement=announcement,
+        announcement_enabled=announcement_enabled
+    )
+
+
+@app.route('/dashboard/<int:server_id>/levels/update', methods=['POST'])
+@require_auth
+@require_bot_admin
+@server_check
+def update_levels(server_id):
+    servers = session['guilds']
+    server = list(filter(lambda g: g['id']==str(sever_id), servers))[0]
+
+    announcement = request.form.get('announcement')
+    enable = request.form.get('enable')
+
+    if announcement == '' or len(announcement) > 2000:
+        flash('The level up announcement should not be empty or have 2000+ characters.', 'warning')
+    else:
+        db.set('Levels.{}:announcement'.format(server_id), announcement)
+        if enable:
+            db.set('Levels.{}:announcement_enabled'.format(server_id), announcement)
+        else:
+            db.delete('Levels.{}:announcement_enabled'.format(server_id))
+        flash('Settings have been successfully!', 'success')
+
+    return redirect(url_for('plugin_levels', server_id=server_id))
+
+
+@app.route('/levels/<int:server_id>')
+def levels(server_id):
+    server_check = str(server_id) in db.smembers('servers')
+    if not server_check:
+        return redirect(url_for('index'))
+    plugin_check = 'Levels' in db.smembers('plugin:{}'.format(server_id))
+    if not plugin_check:
+        return redirect(url_for('index'))
+
+    server = {
+        'id': server_id,
+        'icon': db.get('server:{}:icon'.format(server_id)),
+        'name': db.get('server:{}:name'.format(server_id))
+    }
+
+    _players = db.sort('Levels.{}:players'.format(server_id),
+                by='Levels.{}:player:*:xp'.format(server_id),
+                get=[
+                    'Levels.{}:player:*:xp'.format(server_id),
+                    'Levels.{}:player:*:lvl'.format(server_id),
+                    'Levels.{}:player:*:name'.format(server_id),
+                    'Levels.{}:player:*:avatar'.format(server_id),
+                    'Levels.{}:player:*:discriminator'.format(server_id),
+                    '#'
+                    ],
+                start=0,
+                num=100,
+                desc=True)
+
+    players = []
+    for i in range(0, len(_player),6):
+        lvl = int(_players[i+1])
+        x = 0
+        for l in range(0,lvl):
+            x += 100*(1.2**1)
+        remaining_xp = int(int(_players[i]) - x)
+        player = {
+            'xp': remaining_xp,
+            'lvl': _players[i+1],
+            'lvl_xp': int(100*(1.2**lvl)),
+            'xp_percent': floor(100*(remaining_xp)/(100*(1.2**lvl))),
+            'name': _players[i+2],
+            'avatar': _players[i+3],
+            'discriminator': _players[i+4],
+            'id': _players[i+5]
+        }
+        players.append(player)
+    return render_template('levels.html', players=players, server=server,
+        title="{} leaderboard - RickBot".format(server['name']))
+
 
 if __name__ == '__main__':
     app.debug = True

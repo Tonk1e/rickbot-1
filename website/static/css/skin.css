@@ -3,21 +3,8 @@
     padding-top: 10px;
 }
 
-.navbar {
-    font-weight:500;
-    font-size:14px;
-}
-
 .beta-badge{
     background-color: #006687;
-}
-
-.bootstrap-tagsinput {
-    width: 100% !important;
-}
-
-.label-info {
-    background-color: #008cba!important;
 }
 
 .dashboard-nav{
@@ -44,7 +31,7 @@
 }
 
 .home-jumbotron{
-    background-color: #008cba;
+    background-color: #006687;
     min-height: 100%;
     min-height: 100vh;
     display: flex;
@@ -54,7 +41,7 @@
 }
 
 .dashboard-jumbotron{
-    background-color: #008cba;
+    background-color: #006687;
     color:#FFF;
 }
 .profile-image{
@@ -86,7 +73,6 @@
 
 .btn-home{
     background-color: #FFF;
-    color:#008cba;
 }
 .btn-home:hover{
     background-color: #006687;
@@ -103,22 +89,7 @@
 }
 
 .home-body{
-    background-color: #008cba;
+    background-color: #006687;
     color:#FFF;
     overflow: hidden;
-}
-/* centered columns styles */
-.row-centered {
-    text-align:center;
-}
-.col-centered {
-    display:inline-block;
-    float:none;
-    /* reset the text-align */
-    text-align:left;
-    /* inline-block space fix */
-    margin-right:-4px;
-}
-.tooltip {
-    border-radius:10px!important;
 }
