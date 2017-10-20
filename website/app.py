@@ -382,6 +382,55 @@ def levels(server_id):
     return render_template('levels.html', players=players, server=server,
         title="{} leaderboard - RickBot".format(server['name']))
 
+@app.route('/dashboard/<int:server_id>/welcome')
+@require_auth
+@require_bot_admin
+@server_check
+def plugin_welcome(server_id):
+    disable = request.args.get('disable')
+    if disable:
+        db.srem('plugins:{}'.format(server_id), 'Welcome')
+        return redirect(url_for('dashboard', server_id=server_id))
+    db.sadd('plugins:{}'.format(server_id), 'Welcome')
+    server = session['guilds']
+    server = list(filter(lambda g: g['id']==str(server_id), servers))[0]
+    enabled_plugins = db.smembers('plugins:{}'.format(server_id))
+
+    initial_welcome = '{user}, Welcome to **{server}**! Hope you have a great time here! :wink:'
+    welcome_message = db.get('Welcome.{}:welcome_message'.format(server_id))
+    channel_name = db.get('Welcome.{}:channel_name'.format(server_id))
+    if welcome_message is None:
+        db.set("Welcome.{}:welcome_message".format(server_id), initial_welcome)
+        welcome_message = initial_welcome
+
+    return render_template('plugin-welcome.html',
+        server=server,
+        enabled_plugins=enabled_plugins,
+        welcome_message=welcome_message,
+        channel_name=channel_name
+    )
+
+@app.route('/dashboard/<int:server_id>/welcome/update' methods=['POST'])
+@require_auth
+@require_bot_admin
+@server_check
+def update_welcome(server_id):
+    servers = session['guilds']
+    server = list(filer(lambda g: g['id']==str(server_id), servers))[0]
+
+    welcome_message = request.form.get('welcome_message')
+    channel_name = request.form.get('channel_name')
+
+    if welcome_message == '' or len(welcome_message) > 2000:
+        flash('The welcome message should not be empty or have more than 2000 characters',
+                'warning')
+    else:
+        db.set("Welcome.{}:welcome_message".format(server_id), welcome_message)
+        db.set("Welcome.{}:channel_name".format(server_id), channel_name)
+        flash('Configuration updated ;)', 'success')
+
+    return redirect(url_for('plugin_welcome', server_id=server_id))
+
 
 if __name__ == '__main__':
     app.debug = True
