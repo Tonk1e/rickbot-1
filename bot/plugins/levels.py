@@ -18,6 +18,10 @@ class Levels(Plugin):
             {
                 'name': '!xp',
                 'description': 'Gives you your xp, level and rank'
+            },
+            {
+                'name': '!xp @username'
+                'description': 'Will return username\'s xp, level and rank'
             }
         ]
         return commands
@@ -49,16 +53,23 @@ class Levels(Plugin):
             await self.rickbot.send_message(message.channel, response)
             return
 
-        if message.content == '!xp':
+        if message.content.startswith('!xp'):
             storage = self.get_storage(message.server)
-            player = message.author
+            if message.mentions != []:
+                player = message.mentions[0]
+            else:
+                player = message.author
             players = storage.smembers('players')
             if player.id not in players:
+                resp = "**{}**. It looks like you haven't been ranked yet. "\
+                "Get talking in the chats to get ranked and " \
+                "assigned xp!"
+                if player != message.author:
+                    resp = "It looks like " + player.mention + " is not " \
+                    "ranked. :cry:"
                 await self.rickbot.send_message(message.channel,
-                    "**{}**. It looks like you haven't been ranked yet. Get "\
-                    "talking in the chats to get ranked and " \
-                    "assigned xp!".format(
-                        player.mention
+                    resp.format(
+                        message.author.mention
                     )
                 )
                 return
