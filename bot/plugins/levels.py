@@ -57,6 +57,12 @@ class Levels(Plugin):
             return
 
         if message.content == '!levels':
+            log.info('{}#{}@{} >> {}'.format(
+                message.author.name,
+                message.author.discriminator,
+                message.server.name,
+                message.content
+            ))
             url = 'http://rick-bot.xyz/levels/{}'.format(message.server.id)
             response = "Go and check out **{}**\'s leaderboard " \
                 "here: {} :wink:".format(
@@ -70,6 +76,12 @@ class Levels(Plugin):
             return
 
         if message.content.startswith('!xp'):
+            log.info('{}#{}@{} >> {}'.format(
+                message.author.name,
+                message.author.discriminator,
+                message.server.name,
+                message.content
+            ))
             storage = self.get_storage(message.server)
 
             cooldown_duration = int(storage.get('cooldown') or 0)

@@ -38,7 +38,8 @@ class RickBot(discord.Client):
             self.db.redis.sadd('servers', server.id)
 
     async def send_message(self, *args, **kwargs):
-        log.info('RickBot >> {}'.format(args[1].replace('\n', '~')))
+        server = args[0].server
+        log.info('RickBot@{} >> {}'.format(server.name, args[1].replace('\n', '~')))
         await super().send_message(*args, **kwargs)
 
     async def on_server_join(self, server):
