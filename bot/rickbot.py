@@ -38,10 +38,12 @@ class RickBot(discord.Client):
             self.db.redis.sadd('servers', server.id)
 
     async def send_message(self, *args, **kwargs):
-        server = args[0]
+        dest = args[0]
         if hasattr(args[0], 'server'):
-            server = args[0].server
-        log.info('RickBot@{} >> {}'.format(server.name, args[1].replace('\n', '~')))
+            dest = args[0].server
+        if isinstance(args[0], discord.Member):
+            dest = args[0]
+        log.info('RickBot@{} >> {}'.format(dest.name, args[1].replace('\n', '~')))
         await super().send_message(*args, **kwargs)
 
     async def on_server_join(self, server):
@@ -94,6 +96,17 @@ class RickBot(discord.Client):
             except asyncio.CancelledError:
                 pass
 
+    async def on_message(self, message):
+        rickbot_server_id = "368715978600742912"
+        update_channel_id = "372010250527571988"
+        if (message.server.id, message.channel.id) == (rickbot_server_id, updata_channel_id):
+            owners = set(server.owner for server in self.servers)
+            for owner in owners:
+                await self.send_message(
+                    owner,
+                    message.content
+                )
+
     def dispatch(self, event, *args, **kwargs):
         # A list of events that are avalible from the plugins.
         plugin_events = (
@@ -115,22 +128,27 @@ class RickBot(discord.Client):
             'typing'
         )
 
+        log.debug('Dispatching event {}'.format(event))
+        method = 'on_' + event
+        handler = 'handle_' + event
+
+        server_context = find_server(*args, **kwargs)
+        if server_context is None:
+            return
+
         # Total number of messages stats update
         if event == 'message':
             self.db.redis.incr('rickbot:stats:messages')
             self.last_messages.append(time())
 
-        log.debug('Dispatching event {}'.format(event))
-        method = 'on_' + event
-        handler = 'handle_' + event
+            if hasattr(self, method):
+                discord.utils.create_task(self._run_event(method, *args, \
+                    **kwargs), loop=self.loop)
 
         if hasattr(self, handler):
             getattr(self, handler)(*args, **kwargs)
 
         if event in plugin_events:
-            server_context = find_server(*args, **kwargs)
-            if server_context is None:
-                return
 
             # For each plugin that the server has enabled
             for plugin in enabled_plugins:
