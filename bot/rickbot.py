@@ -38,7 +38,9 @@ class RickBot(discord.Client):
             self.db.redis.sadd('servers', server.id)
 
     async def send_message(self, *args, **kwargs):
-        server = args[0].server
+        server = args[0]
+        if hasattr(args[0], 'server'):
+            server = args[0].server
         log.info('RickBot@{} >> {}'.format(server.name, args[1].replace('\n', '~')))
         await super().send_message(*args, **kwargs)
 
