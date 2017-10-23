@@ -1,2 +1,5 @@
 envfile.list.example
 *pyc
+exporter.sh
+docker-compose.yaml
+envfile.list
