@@ -132,10 +132,6 @@ class RickBot(discord.Client):
         method = 'on_' + event
         handler = 'handle_' + event
 
-        server_context = find_server(*args, **kwargs)
-        if server_context is None:
-            return
-
         # Total number of messages stats update
         if event == 'message':
             self.db.redis.incr('rickbot:stats:messages')
@@ -149,6 +145,9 @@ class RickBot(discord.Client):
             getattr(self, handler)(*args, **kwargs)
 
         if event in plugin_events:
+            server_context = find_server(*args, **kwargs)
+            if server_context is None:
+                return
 
             # For each plugin that the server has enabled
             for plugin in enabled_plugins:
