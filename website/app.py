@@ -300,11 +300,19 @@ def plugin_levels(server_id):
 
     announcement = db.get('Levels.{}:announcement'.format(server_id))
 
+    banned_members = db.smembers('Levels.{}:banned_members'.format(server_id)) or []
+    banned_roles = db.smembers('Levels.{}:banned_roles'.format(server_id)) or []
+
+    cooldown = db.get('Levels.{}:cooldown'.format(server_id)) or 0
+
     return render_template('plugin-levels.html',
         server=server,
         enabled_plugins=enabled_plugins,
         announcement=announcement,
-        announcement_enabled=announcement_enabled
+        announcement_enabled=announcement_enabled,
+        banned_members=banned_members,
+        banned_roles=banned_roles,
+        cooldown=cooldown
     )
 
 
@@ -316,17 +324,37 @@ def update_levels(server_id):
     servers = session['guilds']
     server = list(filter(lambda g: g['id']==str(sever_id), servers))[0]
 
+    banned_members = request.form.getlist('banned_members[]')
+    banned_roles = request.form.getlist('banned_roles[]')
     announcement = request.form.get('announcement')
     enable = request.form.get('enable')
+    cooldown = request.form.get('cooldown')
+
+    try:
+        cooldown = int(cooldown)
+    except ValueError:
+        flash('The cooldown should be an integer', 'warning')
+        return redirect(url_for('plugin_levels', server_id=server_id))
 
     if announcement == '' or len(announcement) > 2000:
         flash('The level up announcement should not be empty or have 2000+ characters.', 'warning')
     else:
         db.set('Levels.{}:announcement'.format(server_id), announcement)
+        db.set('Levels.{}:cooldown'.format(server_id), cooldown)
+
+        db.delete('Levels.{}:banned_members'.format(server_id))
+        if len(banned_members) > 0:
+            db.sadd('Level.{}:banned_members'.format(server_id), *banned_members)
+
+        db.delete('Levels.{}:banned_roles'.format(server_id))
+        if len(banned_roles) > 0:
+            db.sadd('Levels.{}:banned_roles'.format(server_id), *banned_roles)
+
         if enable:
             db.set('Levels.{}:announcement_enabled'.format(server_id), announcement)
         else:
             db.delete('Levels.{}:announcement_enabled'.format(server_id))
+
         flash('Settings have been successfully!', 'success')
 
     return redirect(url_for('plugin_levels', server_id=server_id))

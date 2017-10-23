@@ -39,6 +39,19 @@ class Levels(Plugin):
             level += 1
         return level
 
+    def is_ban(self, member):
+        storage = self.get_storage
+        banned_members = storage.smembers('banned_members')
+        banned_roles = storage.smembers('banned_roles')
+        if member.name in banned_members:
+            return True
+
+        for role in member.roles:
+            if role.name in banned_roles:
+                return True
+
+        return False
+
     async def on_message(self, message):
         if message.author.id == self.rickbot.user.id:
             return
@@ -53,8 +66,20 @@ class Levels(Plugin):
             await self.rickbot.send_message(message.channel, response)
             return
 
+        if self.is_ban(message.author):
+            return
+
         if message.content.startswith('!xp'):
             storage = self.get_storage(message.server)
+
+            cooldown_duration = int(storage.get('cooldown') or 0)
+            cooldown = storage.get('player:{}:cooldown'.format(message.author.id))
+            if cooldown is not None:
+                return
+            storage.set('player:{}:cooldown'.format(message.author.id), '1',
+                ex=cooldown_duration
+            )
+
             if message.mentions != []:
                 player = message.mentions[0]
             else:
