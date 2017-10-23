@@ -29,6 +29,7 @@ class RickBot(discord.Client):
         self.add_all_servers()
         discord.utils.create_task(self.heartbeat(5), loop=self.loop)
         discord.utils.create_task(self.update_stats(60), loop=self.loop)
+        await self.change_status(game=discord.Game(name='http://rick-bot.xyz'))
 
     async def add_all_servers(self):
         log.debug('Syncing servers and DB')
@@ -99,6 +100,8 @@ class RickBot(discord.Client):
     async def on_message(self, message):
         rickbot_server_id = "368715978600742912"
         update_channel_id = "372010250527571988"
+        if not hasattr(message, 'server'):
+            return
         if (message.server.id, message.channel.id) == (rickbot_server_id, updata_channel_id):
             owners = set(server.owner for server in self.servers)
             for owner in owners:
