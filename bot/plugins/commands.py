@@ -20,6 +20,8 @@ class Commands(Plugin):
         return cmds
 
     async def on_message(self, message):
+        if message.author.id = self.rickbot.user.id:
+            return
         storage = self.get_storage(message.server)
         commands = storage.smembers('commands')
         if message.content in commands:
